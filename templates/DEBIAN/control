@@ -1,0 +1,12 @@
+Package: filebrowser
+Version: version
+Architecture: arch
+Maintainer: wcbing <i@wcbing.top>
+Section: web
+Priority: optional
+Homepage: https://github.com/filebrowser/filebrowser
+Description: Web File Browser
+ File Browser provides a file managing interface within a specified directory
+ and it can be used to upload, delete, preview and edit your files. It is a
+ create-your-own-cloud-kind of software where you can just install it on your
+ server, direct it to a path and access your files through a nice web interface.
