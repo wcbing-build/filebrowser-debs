@@ -1,56 +1,70 @@
 #!/bin/sh
+set -e
 
-PACKAGE="filebrowser"
-REPO="filebrowser/filebrowser"
+# Check and extract version number
+[ $# != 1 ] && echo "Usage:  $0 <latest_releases_tag>" && exit 1
+VERSION=$(echo "$1" | sed -n 's|[^0-9]*\([^_]*\).*|\1|p') && test "$VERSION"
 
-# Processing again to avoid errors of remote incoming 
-VERSION=$(echo $1 | sed -n 's|[^0-9]*\([^_]*\).*|\1|p')
+PACKAGE=filebrowser
+REPO=filebrowser/filebrowser
 
-ARCH="amd64 arm64"
+ARCH_LIST="amd64 arm64"
 AMD64_FILENAME="linux-amd64-filebrowser.tar.gz"
 ARM64_FILENAME="linux-arm64-filebrowser.tar.gz"
 
+prepare() {
+    mkdir -p output tmp
+    curl -fs https://api.github.com/repos/$REPO/releases/latest | jq -r '.body' | gzip > tmp/changelog.gz
+}
+
 build() {
-    # Prepare
-    BASE_DIR="$PACKAGE"_"$1"
-    cp -r templates "$BASE_DIR"
-    sed -i "s/Architecture: arch/Architecture: $1/" "$BASE_DIR/DEBIAN/control"
-    sed -i "s/Version: version/Version: $VERSION-1/" "$BASE_DIR/DEBIAN/control"
+    BASE_DIR="$PACKAGE"_"$ARCH" && rm -rf "$BASE_DIR"
+    install -D templates/copyright -t "$BASE_DIR/usr/share/doc/$PACKAGE"
+    install -D tmp/changelog.gz -t "$BASE_DIR/usr/share/doc/$PACKAGE"
+
     # Download and move file
-    curl -sLo "$PACKAGE-$1.tar.gz" "$(get_url_by_arch $1)"
+    curl -fsLo "tmp/$PACKAGE-$ARCH.tar.gz" "$(get_url_by_arch "$ARCH")"
     TMPDIR=$(mktemp -dp .)
-    tar -xzf "$PACKAGE-$1.tar.gz" -C $TMPDIR
-    mv "$TMPDIR/$PACKAGE" "$BASE_DIR/usr/bin/$PACKAGE"
-    chmod 755 "$BASE_DIR/usr/bin/$PACKAGE"
-    mv $TMPDIR/* "$BASE_DIR/usr/share/doc/$PACKAGE/"
-    rmdir $TMPDIR
-    # Build
+    tar -xf "$PACKAGE-$ARCH.tar.gz" -C "$TMPDIR"
+    install -D -m 755 "$FRP_DIR/$PACKAGE" -t "$BASE_DIR/usr/bin" "$TMPDIR/filebrowser"
+    mv "$TMPDIR"/* "$BASE_DIR/usr/share/doc/$PACKAGE/"
+    rmdir "$TMPDIR"
+
+    # Package deb
+    mkdir -p "$BASE_DIR/DEBIAN"
+    SIZE=$(du -sk "$BASE_DIR"/usr | cut -f1)
+    echo "Package: $PACKAGE
+Version: $VERSION-1
+Architecture: $ARCH
+Installed-Size: $SIZE
+Maintainer: wcbing <i@wcbing.top>
+Section: web
+Priority: optional
+Homepage: https://github.com/$REPO
+Description: Web File Browser
+ File Browser provides a file managing interface within a specified directory
+ and it can be used to upload, delete, preview and edit your files. It is a
+ create-your-own-cloud-kind of software where you can just install it on your
+ server, direct it to a path and access your files through a nice web interface.
+" > "$BASE_DIR/DEBIAN/control"
+
     dpkg-deb -b --root-owner-group -Z xz "$BASE_DIR" output
 }
 
 get_url_by_arch() {
-    DOWNLOAD_PERFIX="https://github.com/$REPO/releases/latest/download"
+    DOWNLOAD_PREFIX="https://github.com/$REPO/releases/latest/download"
     case $1 in
-    "amd64") echo "$DOWNLOAD_PERFIX/$AMD64_FILENAME" ;;
-    "arm64") echo "$DOWNLOAD_PERFIX/$ARM64_FILENAME" ;;
+    "amd64") echo "$DOWNLOAD_PREFIX/$AMD64_FILENAME" ;;
+    "arm64") echo "$DOWNLOAD_PREFIX/$ARM64_FILENAME" ;;
     esac
 }
 
-# Check parameters
-if [ $# -ne 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-    echo "Usage:
-    $0 <version>"
-    exit 1
-fi
+prepare
 
-mkdir -p output
-
-for i in $ARCH; do
-    echo "Building $i package..."
-    build "$i"
+for ARCH in $ARCH_LIST; do
+    echo "Building $ARCH package..."
+    build
 done
 
 # Create repo files
-cd output
-apt-ftparchive packages . > Packages
-apt-ftparchive release . > Release
+cd output && apt-ftparchive packages . > Packages && apt-ftparchive release . > Release
