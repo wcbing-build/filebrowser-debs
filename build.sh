@@ -26,7 +26,7 @@ build() {
     curl -fsLo "tmp/$PACKAGE-$ARCH.tar.gz" "$(get_url_by_arch "$ARCH")"
     TMPDIR=$(mktemp -dp .)
     tar -xf "tmp/$PACKAGE-$ARCH.tar.gz" -C "$TMPDIR"
-    install -D -m 755 "$FRP_DIR/$PACKAGE" -t "$BASE_DIR/usr/bin" "$TMPDIR/filebrowser"
+    install -D -m 755 -t "$BASE_DIR/usr/bin" "$TMPDIR/filebrowser"
     mv "$TMPDIR"/* "$BASE_DIR/usr/share/doc/$PACKAGE/"
     rmdir "$TMPDIR"
 
