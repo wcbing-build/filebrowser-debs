@@ -1,27 +1,30 @@
-name: build and release by remote trigger
+name: build and release
 
 on:
   workflow_dispatch:
     inputs:
-      latest_tag:
-        description: 'Latest Tag of Upstream Releases'
+      tag:
+        description: 'Tag of upstream latest release'
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
-  build-release-by-remote-trigger:
+  build-release:
     runs-on: ubuntu-latest
     env:
-      LATEST_TAG: ${{ inputs.latest_tag }}
+      TAG: ${{ inputs.tag }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Build
-      run: ./build.sh $LATEST_TAG
+      run: ./build.sh $TAG
 
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ env.LATEST_TAG }}
+        tag_name: ${{ env.TAG }}
         files: output/*

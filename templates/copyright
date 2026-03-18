@@ -6,7 +6,7 @@ Files: *
 Copyright: 2018 File Browser Contributors
 License: Apache-2.0
 
-Files: DEBIAN/*
+Files: debian/*
 Copyright: 2025 wcbing <i@wcbing.top>
 License: MIT
 

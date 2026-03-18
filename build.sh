@@ -34,7 +34,7 @@ build() {
     mkdir -p "$BASE_DIR/DEBIAN"
     SIZE=$(du -sk "$BASE_DIR"/usr | cut -f1)
     echo "Package: $PACKAGE
-Version: $VERSION-1
+Version: $VERSION+1
 Architecture: $ARCH
 Installed-Size: $SIZE
 Maintainer: wcbing <i@wcbing.top>
